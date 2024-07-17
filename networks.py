@@ -1,20 +1,17 @@
 import torch.nn as nn
+import torch.nn.functional as F
 
 class DemoNet(nn.Module):
-    """
-    A Simple Pytorch Module for demo
-    """
 
     def __init__(self):
         super().__init__()
-        self.test_1 = nn.Linear(784, 2048)
-        self.te_2st = nn.Linear(2048, 784)
-        self._3test = nn.Linear(784, 10)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=2, kernel_size=3, padding=1)
+        self.linear = nn.Linear(392, 10)
 
     def forward(self, x):
-        h = self.test_1(x)
-        h = F.mish(h)
-        h = self.te_2st(h)
-        h = x + h
-        h = self._3test(h)
+        h = self.conv1(x)
+        h = F.relu(h)
+        h = F.max_pool2d(h, 2)
+        h = h.view(-1, 392)
+        h = self.linear(h)
         return h
