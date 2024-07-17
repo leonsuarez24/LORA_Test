@@ -2,6 +2,8 @@ import numpy as np
 import gdown
 import os
 import torch
+from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
+from torchvision import transforms
 
 
 def get_dataset():
@@ -26,7 +28,12 @@ def reshape_data(data_path:str, number_degradations:int):
     '''
     12 Degradations 
     1 Ground Truth
+    Images of 256x256
     '''
+
+    if os.path.exists('data/dataset_reshaped.npy'):
+        print('Data already reshaped!')
+        return
 
     data = np.load(data_path, allow_pickle=True)
     data = data[:, :number_degradations + 1]
@@ -43,3 +50,52 @@ def reshape_data(data_path:str, number_degradations:int):
         np.save(f, new_data)
 
     print('Data reshaped successfully to shape:', new_data.shape)
+
+
+class SeismicDataset(Dataset):
+
+    def __init__(self, data_path:str, transform=None):
+        self.data = np.load(data_path, allow_pickle=True)
+        self.transform = transform
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        ground_truth = sample[0]
+        degraded = sample[1]
+
+        if self.transform:
+            ground_truth = self.transform(ground_truth)
+            degraded = self.transform(degraded)
+
+        return ground_truth, degraded
+    
+
+
+def get_test_val_set(dst_train, split_test = 0.1, split_val = 0.1):
+
+    indices = list(range(len(dst_train)))
+    np.random.shuffle(indices)
+    split_test = int(np.floor(split_test * len(dst_train)))
+    split_val = int(np.floor(split_val * len(dst_train)))
+    np.random.shuffle(indices)
+    train_indices, val_indices, test_indices = indices[split_test+split_val:], indices[:split_val], indices[split_val:split_test+split_val]
+
+    train_sample = SubsetRandomSampler(train_indices)
+    val_sample = SubsetRandomSampler(val_indices)
+    test_sample = SubsetRandomSampler(test_indices)
+
+    return train_sample, val_sample, test_sample
+    
+
+def get_dataloader(batch_size:int, num_workers:int, data_path:str):
+    transform = transforms.Compose([transforms.ToTensor()])
+    dataset = SeismicDataset(data_path, transform=transform)
+    train_sample, val_sample, test_sample = get_test_val_set(dataset)
+    train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sample, num_workers=num_workers)
+    val_loader = DataLoader(dataset, batch_size=batch_size, sampler=val_sample, num_workers=num_workers)
+    test_loader = DataLoader(dataset, batch_size=batch_size, sampler=test_sample, num_workers=num_workers)
+
+    return train_loader, val_loader, test_loader
