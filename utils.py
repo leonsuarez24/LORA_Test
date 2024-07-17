@@ -90,8 +90,8 @@ def get_test_val_set(dst_train, split_test = 0.1, split_val = 0.1):
     return train_sample, val_sample, test_sample
     
 
-def get_dataloader(batch_size:int, num_workers:int, data_path:str):
-    transform = transforms.Compose([transforms.ToTensor()])
+def get_dataloader(batch_size:int, num_workers:int, data_path:str, im_size: tuple):
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Resize(im_size)])
     dataset = SeismicDataset(data_path, transform=transform)
     train_sample, val_sample, test_sample = get_test_val_set(dataset)
     train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sample, num_workers=num_workers)
