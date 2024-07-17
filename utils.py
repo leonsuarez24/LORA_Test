@@ -6,6 +6,16 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from torchvision import transforms, datasets
 
 
+
+def get_weights():
+    if os.path.exists('weights/drunet_color.pth'):
+        print('Weights already downloaded!')
+        return
+    os.makedirs('weights', exist_ok=True)
+    model_url= 'https://huggingface.co/deepinv/drunet/resolve/main/drunet_color.pth?download=true'
+    torch.hub.download_url_to_file(model_url, "weights/drunet_color.pth", hash_prefix=None, progress=True)
+
+
 def get_dataset_seismic():
 
     if os.path.exists('data/dataset.npy'):
