@@ -3,10 +3,10 @@ import gdown
 import os
 import torch
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
-from torchvision import transforms
+from torchvision import transforms, datasets
 
 
-def get_dataset():
+def get_dataset_seismic():
 
     if os.path.exists('data/dataset.npy'):
         print('Dataset already downloaded!')
@@ -21,6 +21,50 @@ def get_dataset():
 
     print('Dataset downloaded successfully!')
 
+
+def get_validation_set(dst_train, split=0.1):
+
+    indices = list(range(len(dst_train)))
+    np.random.shuffle(indices)
+    split = int(np.floor(split * len(dst_train)))
+    np.random.shuffle(indices)
+    train_indices, val_indices = indices[split:], indices[:split]
+
+    train_sample = SubsetRandomSampler(train_indices)
+    val_sample = SubsetRandomSampler(val_indices)
+
+    return train_sample, val_sample
+
+
+
+def get_dataset_torch(dataset:str, data_path:str, batch_size:int):
+
+    if dataset == 'MNIST':
+        channel = 1
+        num_classes = 10
+        im_size = (28, 28)
+        transform = transforms.Compose([transforms.ToTensor()])
+        dst_train = datasets.MNIST(data_path, train=True, download=True, transform=transform)  
+        dst_test = datasets.MNIST(data_path, train=False, download=True, transform=transform)
+        train_sample, val_sample = get_validation_set(dst_train, split=0.1)
+        class_names = [str(c) for c in range(num_classes)]
+
+    elif dataset == 'FMNIST':
+        channel = 1
+        num_classes = 10
+        im_size = (28, 28)
+        transform = transforms.Compose([transforms.ToTensor()])
+        dst_train = datasets.FashionMNIST(data_path, train=True, download=True, transform=transform)  
+        dst_test = datasets.FashionMNIST(data_path, train=False, download=True, transform=transform)
+        train_sample, val_sample = get_validation_set(dst_train, split=0.1)
+        class_names = dst_train.classes
+
+
+    trainloader = torch.utils.data.DataLoader(dst_train, batch_size=batch_size, num_workers=0, sampler=train_sample)
+    valoader = torch.utils.data.DataLoader(dst_train, batch_size=batch_size, num_workers=0, sampler=val_sample)
+    testloader = torch.utils.data.DataLoader(dst_test, batch_size=batch_size, shuffle=False, num_workers=0)
+
+    return channel, im_size, num_classes, class_names, dst_train, dst_test, testloader, trainloader, valoader  
 
 
 def reshape_data(data_path:str, number_degradations:int):
