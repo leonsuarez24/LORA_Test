@@ -4,6 +4,7 @@ import os
 import torch
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from torchvision import transforms, datasets
+import torchvision.utils as vutils
 
 
 
@@ -153,6 +154,17 @@ def get_dataloader(batch_size:int, num_workers:int, data_path:str, im_size: tupl
     test_loader = DataLoader(dataset, batch_size=batch_size, sampler=test_sample, num_workers=num_workers)
 
     return train_loader, val_loader, test_loader
+
+
+def save_reconstructed_images(imgs, recons, num_img, pad, path, name, PSNR, SSIM):
+
+    grid = vutils.make_grid(torch.cat((imgs[:num_img], recons[:num_img])), nrow=num_img, padding=pad, normalize=True)
+    vutils.save_image(grid, f'{path}/{name}.png')
+
+    psnr_imgs = [np.round(PSNR(recons[i].unsqueeze(0), imgs[i].unsqueeze(0)).item(),2) for i in range(num_img)]
+    ssim_imgs = [np.round(SSIM(recons[i].unsqueeze(0), imgs[i].unsqueeze(0)).item(),3) for i in range(num_img)]
+
+    return grid, psnr_imgs, ssim_imgs
 
 
 class AverageMeter(object):
