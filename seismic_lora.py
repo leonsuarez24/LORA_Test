@@ -14,6 +14,7 @@ from torchsummary import summary
 
 
 def main(args):
+    torch.manual_seed(args.seed)
     path_name = f'{args.experiment_number}_lr_{args.lr}_b_{args.batch_size}_e_{args.epochs}_r_{args.rank}'
 
     args.save_path = args.save_path + path_name
@@ -123,7 +124,7 @@ def main(args):
             current_psnr = val_psnr.avg
             torch.save(peft_model.state_dict(), f'{model_path}/model.pth')
 
-        recs_array, psnr_imgs, ssim_imgs = save_reconstructed_images(clean, pred, 3, 2, images_path, f'reconstructed_images_{epoch}', PSNR, SSIM)
+        recs_array, psnr_imgs, ssim_imgs = save_reconstructed_images(noisy[:,:3,:,:], clean, pred, 3, 2, images_path, f'reconstructed_images_{epoch}', PSNR, SSIM)
         recs_images = wandb.Image(recs_array, caption=f'Epoch: {epoch}\nReal\nRec\nPSNRs: {psnr_imgs}\nSSIMs: {ssim_imgs}')
 
         wandb.log({
@@ -158,13 +159,14 @@ def main(args):
  
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parameter Processing')
-    parser.add_argument('--lr', type=float, default='1e-4')
-    parser.add_argument('--epochs', type=int, default='50')
+    parser.add_argument('--lr', type=float, default='1e-3')
+    parser.add_argument('--epochs', type=int, default='20')
     parser.add_argument('--batch_size', type=int, default=2**2)
     parser.add_argument('--save_path', type=str, default='weights/')
     parser.add_argument('--experiment_number', type=int, default=0)
     parser.add_argument('--project_name', type=str, default='LORA_SEISMIC')
-    parser.add_argument('--rank', type=int, default=1)
+    parser.add_argument('--rank', type=int, default=4)
+    parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
     print(args)
     main(args)
