@@ -15,7 +15,7 @@ from torchsummary import summary
 
 def main(args):
     torch.manual_seed(args.seed)
-    path_name = f'{args.experiment_number}_lr_{args.lr}_b_{args.batch_size}_e_{args.epochs}_r_{args.rank}'
+    path_name = f'{args.experiment_number}_lr_{args.lr}_b_{args.batch_size}_e_{args.epochs}_r_{args.rank}_lora_{args.lora}'
 
     args.save_path = args.save_path + path_name
     if os.path.exists(args.save_path):
@@ -48,18 +48,28 @@ def main(args):
 
     criterion = nn.MSELoss()
 
-    weights_lora = [(n, type(m)) for n, m in model.named_modules()]
-    weights_lora = [(n, m) for n, m in weights_lora if m == torch.nn.modules.conv.Conv2d]
-    weights_lora = [n for n, m in weights_lora]
+    if args.lora:
 
-    config = peft.LoraConfig(
-        r=args.rank,
-        target_modules=weights_lora,
-    )
+        print(f'Using LORA with rank {args.rank}')
 
-    peft_model = peft.get_peft_model(model, config)
-    print(summary(peft_model, (4, 256, 256))); peft_model.print_trainable_parameters()
-    optimizer = torch.optim.Adam(peft_model.parameters(), lr=args.lr)
+        weights_lora = [(n, type(m)) for n, m in model.named_modules()]
+        weights_lora = [(n, m) for n, m in weights_lora if m == torch.nn.modules.conv.Conv2d]
+        weights_lora = [n for n, m in weights_lora]
+
+        config = peft.LoraConfig(
+            r=args.rank,
+            target_modules=weights_lora,
+        )
+
+        peft_model = peft.get_peft_model(model, config)
+        print(summary(peft_model, (4, 256, 256))); peft_model.print_trainable_parameters()
+        optimizer = torch.optim.Adam(peft_model.parameters(), lr=args.lr)
+
+    else:
+
+        print('Full finetuning')
+        peft_model = model
+        optimizer = torch.optim.Adam(peft_model.parameters(), lr=args.lr)
 
     wandb.init(
         project=args.project_name,
@@ -167,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--project_name', type=str, default='LORA_SEISMIC')
     parser.add_argument('--rank', type=int, default=4)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--lora', type=bool, default=True)
     args = parser.parse_args()
     print(args)
     main(args)
