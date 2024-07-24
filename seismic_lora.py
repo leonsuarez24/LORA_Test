@@ -68,8 +68,7 @@ def main(args):
     else:
 
         print('Full finetuning')
-        peft_model = model
-        optimizer = torch.optim.Adam(peft_model.parameters(), lr=args.lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     wandb.init(
         project=args.project_name,
@@ -78,7 +77,10 @@ def main(args):
     )
 
     for epoch in range(args.epochs):
-        peft_model.train()
+        if args.lora:
+            peft_model.train()
+        else:
+            model.train()
 
         train_loss = AverageMeter()
         train_ssim = AverageMeter()
@@ -97,7 +99,12 @@ def main(args):
             noisy = torch.cat((noisy, noisy, noisy, noisy), dim=1)
 
             optimizer.zero_grad()
-            pred = peft_model(noisy)
+
+            if args.lora:
+                pred = peft_model(noisy)
+            else:
+                pred = model(noisy)
+
             loss_train = criterion(pred, clean)
             loss_train.backward()
             optimizer.step()
@@ -111,7 +118,10 @@ def main(args):
         
         data_loop_val = tqdm(enumerate(valoader), total=len(valoader), colour='green')
         with torch.no_grad():
-            peft_model.eval()
+            if args.lora:
+                peft_model.eval()
+            else:
+                model.eval()
             for _, val_data in data_loop_val:
 
                 clean, noisy = val_data
@@ -120,7 +130,10 @@ def main(args):
                 clean = torch.cat((clean, clean, clean), dim=1)
                 noisy = torch.cat((noisy, noisy, noisy, noisy), dim=1)
 
-                pred = peft_model(noisy)
+                if args.lora:
+                    pred = peft_model(noisy)
+                else:
+                    pred = model(noisy)
                 loss_val = criterion(pred, clean)
 
                 val_loss.update(loss_val.item())
@@ -132,7 +145,10 @@ def main(args):
 
         if val_psnr.avg > current_psnr:
             current_psnr = val_psnr.avg
-            torch.save(peft_model.state_dict(), f'{model_path}/model.pth')
+            if args.lora:
+                torch.save(peft_model.state_dict(), f'{model_path}/model.pth')
+            else:
+                torch.save(model.state_dict(), f'{model_path}/model.pth')
 
         recs_array, psnr_imgs, ssim_imgs = save_reconstructed_images(noisy[:,:3,:,:], clean, pred, 3, 2, images_path, f'reconstructed_images_{epoch}', PSNR, SSIM)
         recs_images = wandb.Image(recs_array, caption=f'Epoch: {epoch}\nReal\nRec\nPSNRs: {psnr_imgs}\nSSIMs: {ssim_imgs}')
@@ -173,11 +189,11 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default='20')
     parser.add_argument('--batch_size', type=int, default=2**2)
     parser.add_argument('--save_path', type=str, default='weights/')
-    parser.add_argument('--experiment_number', type=int, default=0)
+    parser.add_argument('--experiment_number', type=int, default=6)
     parser.add_argument('--project_name', type=str, default='LORA_SEISMIC')
     parser.add_argument('--rank', type=int, default=4)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--lora', type=bool, default=True)
+    parser.add_argument('--lora', type=bool, default=False)
     args = parser.parse_args()
     print(args)
     main(args)
