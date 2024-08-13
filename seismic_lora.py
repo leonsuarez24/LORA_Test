@@ -185,13 +185,13 @@ def main(args):
  
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parameter Processing')
-    parser.add_argument('--lr', type=float, default='1e-3')
-    parser.add_argument('--epochs', type=int, default='20')
+    parser.add_argument('--lr', type=float, default='0')
+    parser.add_argument('--epochs', type=int, default='1')
     parser.add_argument('--batch_size', type=int, default=2**2)
     parser.add_argument('--save_path', type=str, default='weights/')
-    parser.add_argument('--experiment_number', type=int, default=6)
+    parser.add_argument('--experiment_number', type=int, default=0)
     parser.add_argument('--project_name', type=str, default='LORA_SEISMIC')
-    parser.add_argument('--rank', type=int, default=4)
+    parser.add_argument('--rank', type=int, default=8)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--lora', type=bool, default=False)
     args = parser.parse_args()
